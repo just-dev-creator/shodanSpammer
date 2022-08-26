@@ -38,7 +38,7 @@ logger.addHandler(file)
 class QuarryProtocol(ServerProtocol):
     def player_joined(self):
         ServerProtocol.player_joined(self)
-        logger.info("Player joined: {}".format(self.player.name))
+        logger.info("Player joined: {} and ip {}".format(self.player.name, self.remote_addr.host))
         self.close("You are banned from this server\nReason: You are using shodan")
 
     def packet_status_request(self, buff):
@@ -61,6 +61,7 @@ class QuarryProtocol(ServerProtocol):
             }
         }
 
+        logger.info("Caught someone with ip: {}".format(self.remote_addr.host))
         # send status response
         self.send_packet("status_response", self.buff_type.pack_json(d))
 
@@ -69,7 +70,6 @@ def get_players_real_server():
     status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
     players = []
     for player in status.players.sample:
-        print(player.name)
         players.append({
             "name": player.name,
             "id": player.id
