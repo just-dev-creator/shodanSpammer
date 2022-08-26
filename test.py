@@ -5,3 +5,4 @@ SERVER_PORT = 25565
 server = mcstatus.JavaServer(SERVER_IP, SERVER_PORT)
 status = server.status()
 print(status.raw)
+print(status.players.sample)

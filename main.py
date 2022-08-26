@@ -40,6 +40,13 @@ class QuarryProtocol(ServerProtocol):
         logger.info("Player joined: {}".format(self.player.name))
         self.close("You are banned from this server\nReason: You are using shodan")
 
+def get_players_real_server():
+    status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
+    players = []
+    for player in status.players.sample:
+        print(player.name)
+        players.append(player.name)
+    return players
 
 class QuarryFactory(ServerFactory):
     protocol = QuarryProtocol
@@ -48,13 +55,12 @@ class QuarryFactory(ServerFactory):
         self.motd = SERVER_MOTD
         self.max_players = SERVER_MAX_PLAYERS
         self.online_mode = ONLINE_MODE
-        if PLAYERS is None and REAL_SERVER_IP is not "":
+        self.minecraft_versions = [SERVER_VERSION]
+        if PLAYERS is None and REAL_SERVER_IP != "":
             # Get real server player list
-            status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
-            self.players = status.players.sample
+            self.players = get_players_real_server()
         else:
             self.players = []
-        # self.server.start()
 
 
 def main():
