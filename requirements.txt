@@ -1,3 +1,4 @@
 mcstatus~=9.4.0
 quarry~=1.9.3
 Twisted~=22.4.0
+schedule~=1.1.0

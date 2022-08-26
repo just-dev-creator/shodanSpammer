@@ -1,4 +1,5 @@
 import mcstatus
+import schedule
 from quarry.net.server import ServerFactory, ServerProtocol
 from twisted.internet import reactor
 
@@ -7,18 +8,20 @@ import os
 
 # CONFIG
 
+# Recommended - gets the current information from the real server
+AUTO_MODE = True
+REAL_SERVER_IP = ""
+
+# Set values if not in auto mode
 SERVER_MOTD = "LiveOverflow Let's Play"
 SERVER_VERSION = "Paper 1.18.2"
 SERVER_PROTOCOL_VERSION = 758
 SERVER_PORT = 25565
 SERVER_MAX_PLAYERS = 20
+PLAYERS = []
+SERVER_PLAYERS_ONLINE = len(PLAYERS)
 SERVER_IP = "0.0.0.0"
 ONLINE_MODE = True
-# Players in the sample player list. Set to None to get live player list from the real server.
-PLAYERS = None
-# If you want to get the player list from the real server, set the real server ip here. It's already public knowledge
-# but don't want to leak it here.
-REAL_SERVER_IP = ""
 
 # Configure logging
 logger = logging.getLogger("honeypot")
@@ -33,6 +36,21 @@ logger.addHandler(console)
 logger.addHandler(file)
 
 
+def get_current_server_info():
+    global SERVER_MOTD, SERVER_VERSION, SERVER_PROTOCOL_VERSION, SERVER_PORT, SERVER_MAX_PLAYERS, SERVER_IP, ONLINE_MODE, PLAYERS, SERVER_PLAYERS_ONLINE
+    status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
+    for player in status.players.sample:
+        PLAYERS.append({
+            "name": player.name,
+            "id": player.id
+        })
+    SERVER_MOTD = status.description
+    SERVER_VERSION = status.version.name
+    SERVER_PROTOCOL_VERSION = status.version.protocol
+    SERVER_MAX_PLAYERS = status.players.max
+    SERVER_PLAYERS_ONLINE = status.players.online.real
+    logger.info("Auto mode updated the server info")
+
 class QuarryProtocol(ServerProtocol):
     def player_joined(self):
         ServerProtocol.player_joined(self)
@@ -46,12 +64,12 @@ class QuarryProtocol(ServerProtocol):
 
         d = {
             "description": {
-                "text": self.factory.motd
+                "text": SERVER_MOTD
             },
             "players": {
-                "online": len(self.factory.players),
-                "max": self.factory.max_players,
-                "sample": self.factory.players
+                "online": SERVER_PLAYERS_ONLINE,
+                "max": SERVER_MAX_PLAYERS,
+                "sample": PLAYERS
             },
             "version": {
                 "name": SERVER_VERSION,
@@ -64,33 +82,16 @@ class QuarryProtocol(ServerProtocol):
         self.send_packet("status_response", self.buff_type.pack_json(d))
 
 
-def get_players_real_server():
-    status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
-    players = []
-    for player in status.players.sample:
-        players.append({
-            "name": player.name,
-            "id": player.id
-        })
-    return players
-
-
 class QuarryFactory(ServerFactory):
     protocol = QuarryProtocol
 
-    def __init__(self):
-        self.motd = SERVER_MOTD
-        self.max_players = SERVER_MAX_PLAYERS
-        self.online_mode = ONLINE_MODE
-        self.minecraft_versions = SERVER_VERSION
-        if PLAYERS is None and REAL_SERVER_IP != "":
-            # Get real server player list
-            self.players = get_players_real_server()
-        else:
-            self.players = []
-
 
 def main():
+    # Schedule auto mode if applicable
+    if AUTO_MODE:
+        get_current_server_info()
+        schedule.every(2).minutes.do(get_current_server_info)
+    # Start honeypot server
     factory = QuarryFactory()
     logger.info("Server starting...")
     factory.listen(SERVER_IP, SERVER_PORT)
