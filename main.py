@@ -10,7 +10,8 @@ import os
 
 load_dotenv()
 SERVER_MOTD = "LiveOverflow Let's Play"
-SERVER_VERSION = "1.18.2"
+SERVER_VERSION = "Paper 1.18.2"
+SERVER_PROTOCOL_VERSION = 758
 SERVER_PORT = 25565
 SERVER_MAX_PLAYERS = 20
 SERVER_IP = "0.0.0.0"
@@ -40,13 +41,41 @@ class QuarryProtocol(ServerProtocol):
         logger.info("Player joined: {}".format(self.player.name))
         self.close("You are banned from this server\nReason: You are using shodan")
 
+    def packet_status_request(self, buff):
+        protocol_version = self.factory.force_protocol_version
+        if protocol_version is None:
+            protocol_version = self.protocol_version
+
+        d = {
+            "description": {
+                "text": self.factory.motd
+            },
+            "players": {
+                "online": len(self.factory.players),
+                "max": self.factory.max_players,
+                "sample": self.factory.players
+            },
+            "version": {
+                "name": SERVER_VERSION,
+                "protocol": SERVER_PROTOCOL_VERSION
+            }
+        }
+
+        # send status response
+        self.send_packet("status_response", self.buff_type.pack_json(d))
+
+
 def get_players_real_server():
     status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
     players = []
     for player in status.players.sample:
         print(player.name)
-        players.append(player.name)
+        players.append({
+            "name": player.name,
+            "id": player.id
+        })
     return players
+
 
 class QuarryFactory(ServerFactory):
     protocol = QuarryProtocol
@@ -55,7 +84,7 @@ class QuarryFactory(ServerFactory):
         self.motd = SERVER_MOTD
         self.max_players = SERVER_MAX_PLAYERS
         self.online_mode = ONLINE_MODE
-        self.minecraft_versions = [SERVER_VERSION]
+        self.minecraft_versions = SERVER_VERSION
         if PLAYERS is None and REAL_SERVER_IP != "":
             # Get real server player list
             self.players = get_players_real_server()
