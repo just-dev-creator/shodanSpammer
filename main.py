@@ -1,17 +1,25 @@
+import mcstatus
 from quarry.net.server import ServerFactory, ServerProtocol
 from twisted.internet import reactor
+from dotenv import load_dotenv
 
 import logging
 import os
 
 # CONFIG
 
+load_dotenv()
 SERVER_MOTD = "LiveOverflow Let's Play"
 SERVER_VERSION = "1.18.2"
 SERVER_PORT = 25565
 SERVER_MAX_PLAYERS = 20
 SERVER_IP = "0.0.0.0"
 ONLINE_MODE = True
+# Players in the sample player list. Set to None to get live player list from the real server.
+PLAYERS = None
+# If you want to get the player list from the real server, set the real server ip here. It's already public knowledge
+# but don't want to leak it here.
+REAL_SERVER_IP = ""
 
 # Configure logging
 logger = logging.getLogger("honeypot")
@@ -40,7 +48,12 @@ class QuarryFactory(ServerFactory):
         self.motd = SERVER_MOTD
         self.max_players = SERVER_MAX_PLAYERS
         self.online_mode = ONLINE_MODE
-        self.players = []
+        if PLAYERS is None and REAL_SERVER_IP is not "":
+            # Get real server player list
+            status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
+            self.players = status.players.sample
+        else:
+            self.players = []
         # self.server.start()
 
 
