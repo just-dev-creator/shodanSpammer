@@ -1,14 +1,12 @@
 import mcstatus
 from quarry.net.server import ServerFactory, ServerProtocol
 from twisted.internet import reactor
-from dotenv import load_dotenv
 
 import logging
 import os
 
 # CONFIG
 
-load_dotenv()
 SERVER_MOTD = "LiveOverflow Let's Play"
 SERVER_VERSION = "Paper 1.18.2"
 SERVER_PROTOCOL_VERSION = 758
