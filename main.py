@@ -1,3 +1,5 @@
+from ast import While
+from threading import Thread
 import mcstatus
 import schedule
 from quarry.net.server import ServerFactory, ServerProtocol
@@ -5,6 +7,7 @@ from twisted.internet import reactor
 
 import logging
 import os
+import time
 
 # CONFIG
 
@@ -28,10 +31,14 @@ logger = logging.getLogger("honeypot")
 if not os.path.exists("logs"):
     os.makedirs("logs")
 logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s",
+                              "%Y-%m-%d %H:%M:%S")                              
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
+console.setFormatter(formatter)
 file = logging.FileHandler("logs/honeypot.log")
 file.setLevel(logging.INFO)
+file.setFormatter(formatter)
 logger.addHandler(console)
 logger.addHandler(file)
 
@@ -39,6 +46,7 @@ logger.addHandler(file)
 def get_current_server_info():
     global SERVER_MOTD, SERVER_VERSION, SERVER_PROTOCOL_VERSION, SERVER_PORT, SERVER_MAX_PLAYERS, SERVER_IP, ONLINE_MODE, PLAYERS, SERVER_PLAYERS_ONLINE
     status = mcstatus.JavaServer(REAL_SERVER_IP, 25565).status()
+    PLAYERS = []
     for player in status.players.sample:
         PLAYERS.append({
             "name": player.name,
@@ -50,6 +58,12 @@ def get_current_server_info():
     SERVER_MAX_PLAYERS = status.players.max
     SERVER_PLAYERS_ONLINE = status.players.online.real
     logger.info("Auto mode updated the server info")
+
+def schedule_server_info():
+    while True:
+        get_current_server_info()
+        time.sleep(180)
+
 
 class QuarryProtocol(ServerProtocol):
     def player_joined(self):
@@ -86,11 +100,11 @@ class QuarryFactory(ServerFactory):
     protocol = QuarryProtocol
 
 
+
 def main():
     # Schedule auto mode if applicable
     if AUTO_MODE:
-        get_current_server_info()
-        schedule.every(2).minutes.do(get_current_server_info)
+        Thread(target=schedule_server_info).start()
     # Start honeypot server
     factory = QuarryFactory()
     logger.info("Server starting...")
