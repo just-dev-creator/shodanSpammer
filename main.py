@@ -11,6 +11,8 @@ import time
 
 # CONFIG
 
+INSTANCE_NAME = "do-1"
+
 # Recommended - gets the current information from the real server
 AUTO_MODE = True
 REAL_SERVER_IP = ""
@@ -31,7 +33,7 @@ logger = logging.getLogger("honeypot")
 if not os.path.exists("logs"):
     os.makedirs("logs")
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s",
+formatter = logging.Formatter(f"%(asctime)s;{INSTANCE_NAME};%(levelname)s;%(message)s",
                               "%Y-%m-%d %H:%M:%S")                              
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
